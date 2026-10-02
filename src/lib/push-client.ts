@@ -18,6 +18,8 @@ export interface PushState {
   devices: number;
   /** El servidor tiene claves VAPID. */
   configured: boolean;
+  /** El contacto VAPID no parece real; Apple rechazaría los envíos. */
+  subjectLooksFake: boolean;
 }
 
 function pushSupported(): boolean {
@@ -60,10 +62,11 @@ export async function getPushState(): Promise<PushState> {
       subscribed: false,
       devices: 0,
       configured: false,
+      subjectLooksFake: false,
     };
   }
 
-  const [{ configured, subscriptions }, registration] = await Promise.all([
+  const [{ configured, subscriptions, subjectLooksFake }, registration] = await Promise.all([
     pushApi.status(),
     navigator.serviceWorker.getRegistration('/'),
   ]);
@@ -76,6 +79,7 @@ export async function getPushState(): Promise<PushState> {
     subscribed: Boolean(subscription),
     devices: subscriptions,
     configured,
+    subjectLooksFake,
   };
 }
 

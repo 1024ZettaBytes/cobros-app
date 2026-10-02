@@ -14,8 +14,24 @@ export function isPushConfigured(): boolean {
   return env.vapidPublicKey !== '' && env.vapidPrivateKey !== '';
 }
 
+/**
+ * El `sub` del token VAPID tiene que ser un contacto real. Apple rechaza con
+ * 403 los tokens cuyo subject apunta a un dominio que no existe, y el valor
+ * por defecto (…@cobros.local) es justo eso.
+ */
+export function vapidSubjectLooksFake(subject = env.vapidSubject): boolean {
+  return /\.local$|example\.com$/i.test(subject);
+}
+
 export function configurePush(): void {
   if (!isPushConfigured()) return;
+
+  if (vapidSubjectLooksFake()) {
+    console.warn(
+      `[push] VAPID_SUBJECT es "${env.vapidSubject}". Apple rechaza los envíos con un contacto que no existe: usa tu correo real.`,
+    );
+  }
+
   webpush.setVapidDetails(env.vapidSubject, env.vapidPublicKey, env.vapidPrivateKey);
 }
 
@@ -31,6 +47,11 @@ export interface SendResult {
   /** Suscripciones que el servicio de push ya no reconoce; se borran solas. */
   pruned: number;
   failed: number;
+  /**
+   * Detalle del último fallo. Sin esto, un envío que no llega es
+   * indistinguible de uno que nunca se intentó.
+   */
+  lastError?: { statusCode?: number; message: string; body?: string };
 }
 
 /**
@@ -62,12 +83,22 @@ export async function sendToAll(payload: PushPayload): Promise<SendResult> {
         );
         result.sent += 1;
       } catch (error) {
-        const status = (error as { statusCode?: number }).statusCode;
+        const detail = error as { statusCode?: number; body?: string; message?: string };
+        const status = detail.statusCode;
+
+        // 404/410: el navegador tiró la suscripción. Cualquier otro código es
+        // un problema de configuración y hay que poder verlo.
         if (status === 404 || status === 410) {
           dead.push(subscription.id);
           result.pruned += 1;
         } else {
           result.failed += 1;
+          result.lastError = {
+            statusCode: status,
+            message: detail.message ?? 'Error desconocido',
+            body: typeof detail.body === 'string' ? detail.body.slice(0, 300) : undefined,
+          };
+          console.error('[push] envío fallido', status, detail.body ?? detail.message);
         }
       }
     }),

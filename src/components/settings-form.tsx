@@ -105,12 +105,30 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
 
     try {
       const result = await pushApi.sendTest();
-      await dialog.alert(
-        result.sent > 0 ? 'Aviso de prueba enviado' : 'No se envió a ningún dispositivo',
-        result.sent > 0
-          ? 'Debería llegarte en unos segundos.'
-          : 'No hay navegadores suscritos. Activa los recordatorios primero.',
-      );
+
+      // El estado de arriba se leyó al cargar la página; tras el envío puede
+      // haber cambiado (una suscripción muerta se borra sola).
+      setPush(await getPushState());
+
+      if (result.sent > 0) {
+        await dialog.alert('Aviso de prueba enviado', 'Debería llegarte en unos segundos.');
+      } else if (result.pruned > 0) {
+        await dialog.alert(
+          'La suscripción ya no era válida',
+          'El navegador la había descartado, así que la borré. Apaga y vuelve a encender los recordatorios para suscribirte de nuevo.',
+        );
+      } else if (result.failed > 0) {
+        const error = result.lastError;
+        await dialog.alert(
+          'El servicio de push rechazó el envío',
+          `${error?.statusCode ? `Código ${error.statusCode}. ` : ''}${error?.body || error?.message || 'Sin detalle.'}`,
+        );
+      } else {
+        await dialog.alert(
+          'No hay dispositivos suscritos',
+          'Apaga y vuelve a encender los recordatorios para suscribir este dispositivo.',
+        );
+      }
     } catch (cause) {
       await dialog.alert('No se pudo enviar', describeError(cause));
     } finally {
@@ -172,6 +190,8 @@ export function SettingsForm({ settings }: { settings: AppSettings }) {
                   ? 'Este navegador no soporta avisos. En iPhone, agrega la app a la pantalla de inicio.'
                   : !push.configured
                     ? 'El servidor no tiene claves VAPID configuradas.'
+                    : push.subjectLooksFake
+                      ? 'VAPID_SUBJECT no es un correo real; Apple rechaza los envíos. Cámbialo en las variables del servidor.'
                     : push.devices === 1
                       ? '1 dispositivo recibirá los avisos.'
                       : `${push.devices} dispositivos recibirán los avisos.`}

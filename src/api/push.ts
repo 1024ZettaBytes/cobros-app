@@ -15,7 +15,16 @@ export const pushApi = {
   unsubscribe: (endpoint: string) =>
     api.delete<{ ok: true }>(`/api/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`),
 
-  status: () => api.get<{ configured: boolean; subscriptions: number }>('/api/push/status'),
+  status: () =>
+    api.get<{ configured: boolean; subscriptions: number; subjectLooksFake: boolean }>(
+      '/api/push/status',
+    ),
 
-  sendTest: () => api.post<{ sent: number; pruned: number; failed: number }>('/api/push/test', {}),
+  sendTest: () =>
+    api.post<{
+      sent: number;
+      pruned: number;
+      failed: number;
+      lastError?: { statusCode?: number; message: string; body?: string };
+    }>('/api/push/test', {}),
 };
