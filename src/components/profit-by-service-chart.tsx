@@ -8,32 +8,29 @@ const MIN_VISIBLE = 1.5;
 
 /**
  * Ganancia de cada servicio este mes, en una escala compartida para poder
- * compararlos. Las barras salen del cero hacia la derecha si el servicio ya
- * cubrió su gasto y hacia la izquierda si todavía no.
+ * compararlos: hacia la derecha del cero si ya cubrió su gasto, hacia la
+ * izquierda si todavía no.
  *
- * La línea vertical de cada fila marca la ganancia si cobrara a todos sus
- * clientes: es el mismo lenguaje que el marcador de punto de equilibrio en la
- * barra de cobro, un "hasta aquí puedes llegar".
+ * Solo se dibuja la ganancia real. Llegué a pintar también un tramo claro con
+ * la ganancia "si todos pagan", pero cuando la barra sólida caía a la
+ * izquierda del cero y la clara a la derecha, las dos se tocaban y parecían
+ * una sola barra de dos colores que se sumaban. Ese dato vive en el texto de
+ * abajo, donde no se presta a confusión.
  */
 export function ProfitByServiceChart({ summaries }: { summaries: ServiceSummary[] }) {
   const rows = summaries
     .filter((summary) => summary.finance.activeClients > 0)
-    .sort((a, b) => b.finance.projectedProfit - a.finance.projectedProfit);
+    .sort((a, b) => b.finance.profit - a.finance.profit);
 
   if (rows.length === 0) return null;
 
-  const values = rows.flatMap(({ finance }) => [finance.profit, finance.projectedProfit]);
-  const scale = Math.max(...values.map(Math.abs), 1);
+  const scale = Math.max(...rows.map((row) => Math.abs(row.finance.profit)), 1);
 
   // Si nada está en números rojos, el cero se pega a la izquierda y las barras
   // aprovechan el ancho completo.
-  const hasLoss = values.some((value) => value < 0);
+  const hasLoss = rows.some((row) => row.finance.profit < 0);
   const origin = hasLoss ? 50 : 0;
   const span = hasLoss ? 50 : 100;
-
-  /** Posición en % de un monto dentro de la barra. */
-  const at = (value: number) =>
-    origin + Math.min(Math.max(value / scale, -1), 1) * span;
 
   return (
     <section className="flex flex-col gap-4 rounded-2xl bg-surface p-4">
@@ -41,7 +38,7 @@ export function ProfitByServiceChart({ summaries }: { summaries: ServiceSummary[
 
       <ul className="flex flex-col gap-4">
         {rows.map(({ service, finance }) => {
-          const end = at(finance.profit);
+          const end = origin + Math.min(Math.max(finance.profit / scale, -1), 1) * span;
           const width = Math.abs(end - origin);
 
           return (
@@ -58,29 +55,29 @@ export function ProfitByServiceChart({ summaries }: { summaries: ServiceSummary[
                 </span>
               </div>
 
-              <div
-                role="img"
-                aria-label={`Ganancia ${formatCurrency(finance.profit)}; ${formatCurrency(finance.projectedProfit)} si todos pagan.`}
-                className="relative h-2.5 w-full overflow-hidden rounded-full bg-track">
+              {/* La holgura vertical es para que el eje sobresalga de la pista
+                  y se lea como eje y no como un pedazo más de la barra. */}
+              <div className="relative py-1">
+                <div
+                  role="img"
+                  aria-label={`Ganancia ${formatCurrency(finance.profit)}; ${formatCurrency(finance.projectedProfit)} si todos pagan.`}
+                  className="relative h-4 w-full overflow-hidden rounded-full bg-track">
+                  <div
+                    className={`absolute inset-y-0 rounded-full ${finance.isBreakEven ? 'bg-success' : 'bg-warning'}`}
+                    style={{
+                      left: `${Math.min(origin, end)}%`,
+                      width: `${Math.max(width, finance.profit === 0 ? 0 : MIN_VISIBLE)}%`,
+                    }}
+                  />
+                </div>
+
                 {hasLoss && (
-                  <div aria-hidden className="absolute inset-y-0 left-1/2 w-px bg-line" />
+                  <div
+                    aria-hidden
+                    className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-fg/70"
+                    style={{ left: `${origin}%` }}
+                  />
                 )}
-
-                <div
-                  className={`absolute inset-y-0 rounded-full ${finance.isBreakEven ? 'bg-success' : 'bg-warning'}`}
-                  style={{
-                    left: `${Math.min(origin, end)}%`,
-                    width: `${Math.max(width, finance.profit === 0 ? 0 : MIN_VISIBLE)}%`,
-                  }}
-                />
-
-                {/* El servicio que marca la escala cae justo en el 100%, y
-                    ahí el marcador quedaría fuera del recorte. */}
-                <div
-                  aria-hidden
-                  className="absolute inset-y-0 w-0.5 bg-fg/45"
-                  style={{ left: `min(${at(finance.projectedProfit)}%, calc(100% - 2px))` }}
-                />
               </div>
 
               <p className="text-sm text-muted">
@@ -93,7 +90,7 @@ export function ProfitByServiceChart({ summaries }: { summaries: ServiceSummary[
         })}
       </ul>
 
-      <p className="text-sm text-muted">La línea marca la ganancia si cobras a todos.</p>
+      {hasLoss && <p className="text-sm text-muted">La línea vertical es el cero.</p>}
     </section>
   );
 }
