@@ -7,17 +7,20 @@ import { describeError, servicesApi } from '@/api';
 import { Button } from '@/components/ui/button';
 import { ErrorBanner } from '@/components/ui/error-banner';
 import { TextField } from '@/components/ui/text-field';
-import type { NewService } from '@/types';
+import type { NewService, Service } from '@/types';
 import { formatCurrency, parseAmount } from '@/utils/format';
 import { hasErrors, validateService, type ValidationErrors } from '@/utils/validation';
 
-export function ServiceForm() {
+/** Sirve para dar de alta y para editar; `service` decide cuál de las dos. */
+export function ServiceForm({ service }: { service?: Service }) {
   const router = useRouter();
 
-  const [name, setName] = useState('');
-  const [clientPrice, setClientPrice] = useState('');
-  const [monthlyExpense, setMonthlyExpense] = useState('');
-  const [billingDay, setBillingDay] = useState('');
+  const [name, setName] = useState(service?.name ?? '');
+  const [clientPrice, setClientPrice] = useState(service ? String(service.clientPrice) : '');
+  const [monthlyExpense, setMonthlyExpense] = useState(
+    service ? String(service.monthlyExpense) : '',
+  );
+  const [billingDay, setBillingDay] = useState(service ? String(service.billingDay) : '');
   const [errors, setErrors] = useState<ValidationErrors<NewService>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -53,8 +56,14 @@ export function ServiceForm() {
     setFailure(null);
 
     try {
-      await servicesApi.create(draft as NewService);
-      router.push('/');
+      if (service) {
+        await servicesApi.update(service.id, draft as NewService);
+        router.push(`/service/${service.id}`);
+      } else {
+        await servicesApi.create(draft as NewService);
+        router.push('/services');
+      }
+
       router.refresh();
     } catch (cause) {
       setFailure(describeError(cause));
@@ -94,7 +103,11 @@ export function ServiceForm() {
         value={monthlyExpense}
         onChange={(event) => setMonthlyExpense(event.target.value)}
         error={errors.monthlyExpense}
-        hint="Lo que te cuesta el servicio a ti."
+        hint={
+          service
+            ? 'Lo que te cuesta el servicio a ti. Si lo cambias, aplica desde este mes: los meses anteriores conservan el gasto que tenían.'
+            : 'Lo que te cuesta el servicio a ti.'
+        }
       />
 
       <TextField
@@ -121,7 +134,7 @@ export function ServiceForm() {
 
       <div className="mt-2 flex flex-col gap-2">
         <Button type="submit" loading={isSaving}>
-          Guardar servicio
+          {service ? 'Guardar cambios' : 'Guardar servicio'}
         </Button>
         <Button type="button" variant="secondary" onClick={() => router.back()}>
           Cancelar

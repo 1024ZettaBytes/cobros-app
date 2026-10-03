@@ -92,4 +92,36 @@ create table sent_reminders (
 );
 `,
   },
+  {
+    name: '002_service_expenses',
+    sql: `-- Historial del gasto mensual de cada servicio.
+--
+-- services.monthly_expense sigue siendo el gasto vigente y es el que lee todo
+-- lo que habla del mes en curso. Esta tabla guarda desde qué ciclo rige cada
+-- valor, que es lo único que permite que las gráficas de meses pasados usen
+-- el gasto que de verdad hubo y no el de hoy.
+
+create table service_expenses (
+  service_id       text not null references services (id) on delete cascade,
+  -- Ciclo a partir del cual rige este gasto, hasta que lo releve otro.
+  cycle_month      smallint not null check (cycle_month between 1 and 12),
+  cycle_year       smallint not null check (cycle_year between 2000 and 2100),
+  monthly_expense  numeric(10, 2) not null check (monthly_expense >= 0),
+  recorded_at      timestamptz not null default now(),
+
+  primary key (service_id, cycle_year, cycle_month)
+);
+
+-- Del pasado solo se conoce el gasto actual, así que se registra desde el
+-- ciclo de alta de cada servicio. Los meses anteriores a esta migración
+-- siguen siendo una aproximación; de aquí en adelante, cada cambio queda
+-- anotado en el ciclo en que ocurrió.
+insert into service_expenses (service_id, cycle_month, cycle_year, monthly_expense)
+select id,
+       extract(month from created_at)::smallint,
+       extract(year from created_at)::smallint,
+       monthly_expense
+from services;
+`,
+  },
 ];

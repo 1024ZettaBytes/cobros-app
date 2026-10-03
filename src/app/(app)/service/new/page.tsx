@@ -6,7 +6,7 @@ export const metadata = { title: 'Nuevo servicio · Mis cobros' };
 export default function NewServicePage() {
   return (
     <>
-      <PageHeader title="Nuevo servicio" backHref="/" />
+      <PageHeader title="Nuevo servicio" backHref="/services" />
       <ServiceForm />
     </>
   );

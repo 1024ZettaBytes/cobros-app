@@ -21,6 +21,22 @@ export function getDueDate(billingDay: number, cycle: BillingCycle): Date {
   return new Date(cycle.year, cycle.month - 1, day, 0, 0, 0, 0);
 }
 
+/**
+ * Número de mes absoluto. Sirve para comparar y restar ciclos sin pelearse
+ * con el cambio de año: enero de 2027 va justo después de diciembre de 2026.
+ */
+export function toOrdinal(cycle: BillingCycle): number {
+  return cycle.year * 12 + cycle.month;
+}
+
+/** Inversa de toOrdinal. */
+export function fromOrdinal(ordinal: number): BillingCycle {
+  // Diciembre cae en el múltiplo exacto de 12, así que hay que restar uno
+  // antes de dividir para no empujarlo al año siguiente.
+  const year = Math.floor((ordinal - 1) / 12);
+  return { month: ordinal - year * 12, year };
+}
+
 /** Ciclo al que pertenece una fecha (por defecto, hoy). */
 export function getCycleForDate(date: Date = new Date()): BillingCycle {
   return { month: date.getMonth() + 1, year: date.getFullYear() };

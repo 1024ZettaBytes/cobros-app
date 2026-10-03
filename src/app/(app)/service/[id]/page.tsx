@@ -24,19 +24,27 @@ export default async function ServiceDetailPage({ params }: Props) {
       <PageHeader
         title={service.name}
         subtitle={`${formatCurrency(service.clientPrice)} por cliente · corte el ${formatDueDate(dueDate)}`}
-        backHref="/"
+        backHref="/services"
         action={
-          <Link
-            href={`/client/new?serviceId=${service.id}`}
-            className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-sm font-bold text-white transition-opacity hover:opacity-90">
-            <PlusIcon className="size-4" />
-            Cliente
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/service/${service.id}/edit`}
+              className="rounded-full border border-line px-3 py-1.5 text-sm font-bold transition-colors hover:bg-surface-2">
+              Editar
+            </Link>
+
+            <Link
+              href={`/client/new?serviceId=${service.id}`}
+              className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-sm font-bold text-white transition-opacity hover:opacity-90">
+              <PlusIcon className="size-4" />
+              Cliente
+            </Link>
+          </div>
         }
       />
 
       <section className="mb-4 flex flex-col gap-4 rounded-2xl bg-surface p-4">
-        <p className="text-sm text-muted capitalize">{formatCycle(cycle)}</p>
+        <p className="text-sm text-muted first-letter:uppercase">{formatCycle(cycle)}</p>
 
         <p className="flex flex-wrap items-baseline gap-2">
           <span className="text-3xl font-bold">{formatCurrency(finance.collected)}</span>

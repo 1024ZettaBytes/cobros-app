@@ -20,12 +20,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             Mis cobros
           </Link>
 
-          <Link
-            href="/settings"
-            aria-label="Ajustes"
-            className="rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-fg">
-            <GearIcon />
-          </Link>
+          <nav className="flex items-center gap-1">
+            <Link
+              href="/services"
+              className="rounded-lg px-3 py-2 text-sm font-bold text-muted transition-colors hover:bg-surface hover:text-fg">
+              Servicios
+            </Link>
+
+            <Link
+              href="/settings"
+              aria-label="Ajustes"
+              className="rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-fg">
+              <GearIcon />
+            </Link>
+          </nav>
         </div>
       </header>
 

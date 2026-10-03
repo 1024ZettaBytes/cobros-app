@@ -34,3 +34,10 @@ export function parseAmount(input: string): number {
   if (!cleaned) return NaN;
   return Number(cleaned);
 }
+
+/** "oct" — etiqueta corta para el eje de las gráficas. */
+export function formatMonthShort(cycle: BillingCycle): string {
+  const date = new Date(cycle.year, cycle.month - 1, 1);
+  // es-MX abrevia con punto ("oct."); en un eje estorba.
+  return date.toLocaleDateString('es-MX', { month: 'short' }).replace('.', '');
+}

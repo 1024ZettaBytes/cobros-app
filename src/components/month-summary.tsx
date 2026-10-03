@@ -1,3 +1,4 @@
+import { BarLegend, StackedBar } from '@/components/stacked-bar';
 import type { BillingCycle } from '@/utils/cycle';
 import type { GlobalFinance } from '@/utils/finance';
 import { formatCurrency, formatCycle } from '@/utils/format';
@@ -5,13 +6,23 @@ import { formatCurrency, formatCycle } from '@/utils/format';
 /** Encabezado del dashboard: cómo va el mes sumando todos los servicios. */
 export function MonthSummary({ cycle, totals }: { cycle: BillingCycle; totals: GlobalFinance }) {
   return (
-    <section className="rounded-2xl bg-surface p-4">
-      <p className="text-sm text-muted capitalize">{formatCycle(cycle)}</p>
+    <section className="flex flex-col gap-4 rounded-2xl bg-surface p-4">
+      <div>
+        <p className="text-sm text-muted first-letter:uppercase">{formatCycle(cycle)}</p>
+        <p className="text-3xl font-semibold">{formatCurrency(totals.collected)}</p>
+        <p className="text-sm text-muted">cobrados de {formatCurrency(totals.expectedTotal)}</p>
+      </div>
 
-      <p className="text-3xl font-semibold">{formatCurrency(totals.collected)}</p>
-      <p className="text-sm text-muted">cobrados de {formatCurrency(totals.expectedTotal)}</p>
+      <div className="flex flex-col gap-2">
+        <StackedBar
+          collected={totals.collected}
+          expectedTotal={totals.expectedTotal}
+          expense={totals.totalExpense}
+        />
+        <BarLegend />
+      </div>
 
-      <dl className="mt-4 flex justify-between gap-2 border-t border-line pt-4">
+      <dl className="flex justify-between gap-2 border-t border-line pt-4">
         <Stat label="Gastos" value={formatCurrency(totals.totalExpense)} />
         <Stat
           label="Ganancia"
